@@ -39,7 +39,6 @@ bkk_traffic_tracker/
 │   ├── kafka_utils.py
 │   └── queries.py
 ├── analysis.py
-├── config.py
 ├── data_collection.py
 ├── streamlit_gui.py
 ├── requirements.txt

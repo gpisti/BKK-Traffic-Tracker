@@ -1,0 +1,9 @@
+streamlit
+kafka-python
+confluent_kafka
+psycopg2
+pandas
+requests
+json
+folium
+altair

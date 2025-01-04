@@ -1,153 +1,58 @@
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from confluent_kafka import Consumer
-import psycopg2
-import time
-import json
-from datetime import datetime
-from database.db_utils import get_connection
-from database.db_queries import (
-    CREATE_DB_CHECK,
-    CREATE_DATABASE,
-    CREATE_VEHICLE_DATA_TABLE,
-    INSERT_VEHICLE_DATA,
-)
+from confluent_kafka import Producer, Consumer
+from config import KAFKA_BOOTSTRAP_SERVERS
 
 
-def connect_server(dbname="bkk_traffic_tracker"):
-    return get_connection(dbname)
+def get_producer_config():
+    """
+    Returns the configuration dictionary for a Kafka producer.
+
+    The configuration includes the bootstrap servers and the number of retries
+    for sending messages.
+
+    Returns:
+        dict: A dictionary containing the Kafka producer configuration.
+    """
+    return {
+        "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+        "retries": 5,
+    }
 
 
-def create_database():
-    try:
-        connection = psycopg2.connect(
-            dbname="postgres",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
-        )
-        connection.autocommit = True
+def get_consumer_config():
+    """
+    Generate the configuration dictionary for a Kafka consumer.
 
-        if connection:
-            cursor = connection.cursor()
-
-            cursor.execute(CREATE_DB_CHECK)
-            exists = cursor.fetchone()
-
-            if not exists:
-                cursor.execute(CREATE_DATABASE)
-                print("Database created successfully.")
-            else:
-                print("Database already exists.")
-
-            cursor.close()
-            connection.close()
-
-            time.sleep(1)
-
-    except Exception as e:
-        print(f"Error creating the database: {e}")
+    Returns:
+        dict: A dictionary containing the configuration settings for a Kafka consumer,
+        including bootstrap servers, group ID, offset reset policy, and retry count.
+    """
+    return {
+        "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+        "group.id": "vehicle-data-group",
+        "auto.offset.reset": "earliest",
+        "retries": 5,
+    }
 
 
-def create_table():
-    connection = connect_server()
-    if connection:
-        try:
-            cursor = connection.cursor()
-            cursor.execute(CREATE_VEHICLE_DATA_TABLE)
-            print("Table is created successfully")
-        except Exception as e:
-            print(f"Error while creating table: {e}")
-        finally:
-            cursor.close()
-            connection.close()
+def create_kafka_producer():
+    """
+    Creates and returns a Kafka producer instance.
+
+    The producer is configured using the settings provided by the
+    get_producer_config function.
+
+    Returns:
+        Producer: An instance of the Kafka producer.
+    """
+    return Producer(get_producer_config())
 
 
-def insert_vehicle_data(vehicle_data):
-    connection = connect_server()
-    if connection:
-        try:
-            cursor = connection.cursor()
-            for vehicle in vehicle_data:
-                wheelchair_accessible = (
-                    True if vehicle["wheelchair_accessible"] == 2 else False
-                )
+def create_kafka_consumer():
+    """
+    Create a Kafka consumer instance using the predefined configuration.
 
-                vehicle_timestamp = datetime.strptime(
-                    vehicle["timestamp"], "%Y-%m-%d %H:%M:%S"
-                )
-
-                cursor.execute(
-                    INSERT_VEHICLE_DATA,
-                    (
-                        vehicle["trip_id"],
-                        vehicle["route_id"],
-                        vehicle["latitude"],
-                        vehicle["longitude"],
-                        vehicle["bearing"],
-                        vehicle["speed"],
-                        vehicle["current_stop_sequence"],
-                        vehicle["current_status"],
-                        vehicle_timestamp,
-                        vehicle["stop_id"],
-                        vehicle["vehicle_id"],
-                        vehicle["vehicle_label"],
-                        vehicle["license_plate"],
-                        wheelchair_accessible,
-                    ),
-                )
-            print("Data inserted/upgraded successfully")
-        except Exception as e:
-            print(f"Error while inserting/upgrading table: {e}")
-        finally:
-            cursor.close()
-            connection.close()
-
-
-def consume_kafka_messages(topic_name, kafka_server):
-    consumer = Consumer(
-        {
-            "bootstrap.servers": kafka_server,
-            "group.id": "vehicle-data-group",
-            "auto.offset.reset": "earliest",
-            "enable.auto.commit": False,
-        }
-    )
-    consumer.subscribe([topic_name])
-
-    print("Consuming messages from Kafka...")
-    try:
-        while True:
-            msg = consumer.poll(1.0)
-            if msg is None:
-                continue
-            if msg.error():
-                print(f"Consumer error: {msg.error()}")
-                continue
-
-            try:
-                vehicle_data = json.loads(msg.value().decode("utf-8"))
-                if isinstance(vehicle_data, dict):
-                    vehicle_data = [vehicle_data]
-                insert_vehicle_data(vehicle_data)
-                consumer.commit(asynchronous=False)
-            except json.JSONDecodeError as e:
-                print(f"Error decoding JSON: {e}")
-            except Exception as e:
-                print(f"Error processing message: {e}")
-    finally:
-        consumer.close()
-
-
-if __name__ == "__main__":
-    create_database()
-    create_table()
-
-    topic_name = "vehicle-data"
-    kafka_server = "localhost:9092"
-
-    consume_kafka_messages(topic_name, kafka_server)
+    Returns:
+        Consumer: An instance of the Kafka Consumer configured with settings
+        such as bootstrap servers, group ID, and offset reset policy.
+    """
+    return Consumer(get_consumer_config())

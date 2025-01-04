@@ -4,7 +4,19 @@ from config import DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
 
 def get_connection(dbname=DB_NAME):
     """
-    Creates and returns a connection to the specified PostgreSQL database.
+    Establishes a connection to a PostgreSQL database using the provided or default
+    configuration parameters.
+
+    Parameters:
+        dbname (str): The name of the database to connect to. Defaults to the value
+                    specified in the configuration file.
+
+    Returns:
+        connection: A connection object if the connection is successful, otherwise
+                    None if an error occurs during the connection attempt.
+
+    Raises:
+        Prints an error message if the connection to the database fails.
     """
     try:
         connection = psycopg2.connect(

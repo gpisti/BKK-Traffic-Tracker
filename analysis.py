@@ -1,5 +1,3 @@
-# analysis.py
-
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -8,7 +6,6 @@ import folium
 from folium.plugins import MarkerCluster, HeatMap
 from database.database_consumer import connect_server
 
-# Importing the extracted queries
 from modules.queries import (
     TRAFFIC_HEATMAP_BASE,
     KPIS_BASE,
@@ -239,8 +236,7 @@ def analyze_environmental_impact(selected_route):
     """
     )
 
-    # Example calculation: estimated_emissions = traffic_count * (1 / avg_speed)
-    df["estimated_emissions"] = df["traffic_count"] * (1 / df["avg_speed"])
+     df["estimated_emissions"] = df["traffic_count"] * (1 / df["avg_speed"])
 
     chart = (
         alt.Chart(df.head(15))
@@ -282,8 +278,7 @@ def analyze_correlation(selected_route):
     """
     )
 
-    # Compute correlation matrix
-    corr = df.corr()
+     corr = df.corr()
 
     corr_reset = corr.reset_index().melt(id_vars="index")
     corr_reset.columns = ["variable", "index", "value"]
@@ -333,7 +328,7 @@ def analyze_route_optimization(selected_route):
     """
     )
 
-    # Example calculation: suggested_speed = avg_speed + (10 - avg_speed) / 2
+
     df["suggested_speed"] = df["avg_speed"] + (10 - df["avg_speed"]) / 2
 
     chart = (
@@ -357,7 +352,7 @@ def display_map(selected_route):
 
     :param selected_route: The route_id to filter by or "All" for no filtering.
     """
-    # This query is not speed-related and remains unchanged
+
     query = """
     SELECT vehicle_id, route_id, latitude, longitude
     FROM vehicle_data
@@ -407,7 +402,6 @@ def analyze_traffic_by_day_of_week(selected_route):
         st.write("No data available for traffic by day of the week.")
         return
 
-    # Map day_of_week numbers to day names
     day_mapping = {
         0: "Sunday",
         1: "Monday",
